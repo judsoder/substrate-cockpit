@@ -1,290 +1,228 @@
-// Substrate Cockpit — Project Control Room
-// Each panel represents a different form of trust:
-//   Header = orientation, State = reality, Authority = safety,
-//   Resources = legibility, Trace = continuity, Unknowns = honesty,
-//   Approvals = human sovereignty
+// Substrate Cockpit
+// Precision operations UI. Trust through structure, not warmth.
 
 export default function CockpitPage() {
   return (
-    <div style={{ maxWidth: '1080px', margin: '0 auto', padding: '40px 24px 80px' }}>
+    <div style={{ maxWidth: '1100px', margin: '0 auto', padding: '32px 20px 64px' }}>
 
       {/* ━━━ 1. PROJECT HEADER ━━━ */}
-      {/* Trust form: Orientation — "I know where I am" */}
-      <header style={{ marginBottom: '40px' }}>
-        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '24px' }}>
-          <div>
-            <h1 className="heading-serif" style={{ fontSize: '2rem', lineHeight: 1.15, marginBottom: '6px' }}>
+      <header style={{ marginBottom: '28px' }}>
+        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: '12px' }}>
+            <h1 style={{ fontSize: '18px', fontWeight: 600, letterSpacing: '-0.01em' }}>
               Learner
             </h1>
-            <p style={{ fontSize: '0.95rem', color: 'var(--text-secondary)', maxWidth: '480px', lineHeight: 1.5 }}>
-              Adaptive diagnostic + evidence fusion platform for Max and Lev
-            </p>
+            <span style={{ fontSize: '12.5px', color: 'var(--text-muted)' }}>
+              Adaptive diagnostic + evidence fusion for Max and Lev
+            </span>
           </div>
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '8px', flexShrink: 0 }}>
-            <span className="badge badge-verified">Stable</span>
-            <span className="mono" style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <span className="badge badge-green">Stable</span>
+            <span className="mono" style={{ fontSize: '10px', color: 'var(--text-faint)' }}>
               Verified 11:24 AM
             </span>
           </div>
         </div>
 
-        {/* Meta row */}
         <div style={{
           display: 'flex',
-          gap: '24px',
-          marginTop: '20px',
-          paddingTop: '16px',
+          gap: '20px',
+          marginTop: '12px',
+          paddingTop: '10px',
           borderTop: '1px solid var(--border)',
-          flexWrap: 'wrap',
         }}>
-          <MetaItem label="Owner" value="Jud" />
-          <MetaItem label="Environment" value="Local + Vercel prod" />
-          <MetaItem label="Agents" value="Jed · Hermes" />
-          <MetaItem label="Repo" value="judsoder/learner" />
+          <Meta label="Owner" value="Jud" />
+          <Meta label="Env" value="Local + Vercel" />
+          <Meta label="Agents" value="Jed · Hermes" />
+          <Meta label="Repo" value="judsoder/learner" />
         </div>
       </header>
 
-      {/* ━━━ MAIN GRID ━━━ */}
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: '1fr 1fr',
-        gap: '20px',
-        marginBottom: '20px',
-      }}>
+      {/* ━━━ GRID ━━━ */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
 
         {/* ━━━ 2. CURRENT STATE ━━━ */}
-        {/* Trust form: Reality — "What is true right now" */}
         <div className="card">
-          <div className="section-label">Current State</div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-            <StateRow status="verified" text="Repo synced to latest bounded fixes" />
-            <StateRow status="verified" text="Home → About discoverability improved" />
-            <StateRow status="verified" text="Evidence upload flow simplified" />
-            <StateRow status="verified" text="/api/learners route live, /api/seed GET deprecated" />
-            <StateRow status="blocked" text="Deploy blocked — missing Supabase env on Hermes mini" />
-            <StateRow status="neutral" text="No unverified production changes detected" />
+          <div className="section-header">
+            <div className="section-icon">◉</div>
+            <div className="section-title">Current State</div>
+          </div>
+          <div>
+            <StateRow dot="green" text="Repo synced to latest bounded fixes" />
+            <StateRow dot="green" text="Home → About discoverability improved" />
+            <StateRow dot="green" text="Evidence upload flow simplified" />
+            <StateRow dot="green" text="/api/learners route live, /api/seed GET removed" />
+            <StateRow dot="red" text="Deploy blocked — missing Supabase env on Hermes mini" />
+            <StateRow dot="neutral" text="No unverified production changes" />
           </div>
         </div>
 
-        {/* ━━━ 3. AUTHORITY / BOUNDARIES ━━━ */}
-        {/* Trust form: Safety — "The boundaries are real" */}
+        {/* ━━━ 3. AUTHORITY ━━━ */}
         <div className="card">
-          <div className="section-label">Authority &amp; Boundaries</div>
-          <div style={{ display: 'flex', flexDirection: 'column' }}>
-            <div className="authority-row">
-              <span className="authority-scope">CAN</span>
+          <div className="section-header">
+            <div className="section-icon">◈</div>
+            <div className="section-title">Authority & Boundaries</div>
+          </div>
+          <div>
+            <div className="auth-row">
+              <span className="auth-scope" style={{ color: 'var(--green)' }}>CAN</span>
               <span style={{ color: 'var(--text-secondary)' }}>
                 Bounded repo work, tests, build verification, project-scoped deploys
               </span>
             </div>
-            <div className="authority-row">
-              <span className="authority-scope">CANNOT</span>
+            <div className="auth-row">
+              <span className="auth-scope" style={{ color: 'var(--red)' }}>CANNOT</span>
               <span style={{ color: 'var(--text-secondary)' }}>
-                Access personal browser sessions, broad messaging, money movement, credential creation
+                Personal browser sessions, broad messaging, money movement, credential creation
               </span>
             </div>
-            <div className="authority-row">
-              <span className="authority-scope" style={{ color: 'var(--attention)' }}>APPROVE</span>
+            <div className="auth-row">
+              <span className="auth-scope" style={{ color: 'var(--amber)' }}>NEEDS</span>
               <span style={{ color: 'var(--text-secondary)' }}>
-                Prod release, credential changes, messaging authority changes, new resource connections
+                Prod release, credential changes, messaging authority, new resource connections
               </span>
             </div>
           </div>
-
-          <div style={{ marginTop: '16px', paddingTop: '12px', borderTop: '1px solid var(--border)' }}>
-            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-              <AgentBadge name="Hermes" role="Bounded operator" />
-              <AgentBadge name="Jed" role="Advisor / inspector" />
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* ━━━ SECOND ROW ━━━ */}
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: '1fr 1fr',
-        gap: '20px',
-        marginBottom: '20px',
-      }}>
-
-        {/* ━━━ 4. CONNECTED RESOURCES ━━━ */}
-        {/* Trust form: Legibility — "The project has a body I can see" */}
-        <div className="card">
-          <div className="section-label">Connected Resources</div>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-            <ResourcePill icon="◉" label="GitHub" value="judsoder/learner" status="verified" />
-            <ResourcePill icon="▲" label="Vercel" value="learner-flame" status="attention" />
-            <ResourcePill icon="◆" label="Supabase" value="connected" status="verified" />
-            <ResourcePill icon="◎" label="Domain" value="learner-flame.vercel.app" status="neutral" />
-            <ResourcePill icon="⬡" label="Env bundle" value="incomplete on Hermes mini" status="blocked" />
-            <ResourcePill icon="⬢" label="Machines" value="Jud mini · Hermes mini" status="neutral" />
+          <div style={{ marginTop: '14px', paddingTop: '10px', borderTop: '1px solid var(--border)', display: 'flex', gap: '8px' }}>
+            <AgentTag name="Hermes" role="bounded operator" />
+            <AgentTag name="Jed" role="advisor" />
           </div>
         </div>
 
-        {/* ━━━ 5. RECENT VERIFIED ACTIONS ━━━ */}
-        {/* Trust form: Continuity — "There is a coherent thread of work" */}
+        {/* ━━━ 4. RESOURCES ━━━ */}
         <div className="card">
-          <div className="section-label">Recent Verified Actions</div>
+          <div className="section-header">
+            <div className="section-icon">⬡</div>
+            <div className="section-title">Connected Resources</div>
+          </div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+            <Chip label="GitHub" value="judsoder/learner" dot="green" />
+            <Chip label="Vercel" value="learner-flame" dot="amber" />
+            <Chip label="Supabase" value="connected" dot="green" />
+            <Chip label="Domain" value="learner-flame.vercel.app" dot="neutral" />
+            <Chip label="Env" value="incomplete — Hermes mini" dot="red" />
+            <Chip label="Machines" value="Jud mini · Hermes mini" dot="neutral" />
+          </div>
+        </div>
+
+        {/* ━━━ 5. TRACE ━━━ */}
+        <div className="card">
+          <div className="section-header">
+            <div className="section-icon">▸</div>
+            <div className="section-title">Recent Verified Actions</div>
+          </div>
           <div>
-            <TraceItem agent="Hermes" text="Improved home → about discoverability for parents" />
-            <TraceItem agent="Hermes" text="Removed dead GET /api/seed export" />
-            <TraceItem agent="Hermes" text="Introduced dedicated /api/learners route" />
-            <TraceItem agent="Hermes" text="Simplified evidence upload learner selection" />
-            <TraceItem agent="Jed" text="Updated Hermes authority rules and operator scope" />
+            <Trace agent="Hermes" text="Improved home → about discoverability for parents" />
+            <Trace agent="Hermes" text="Removed dead GET /api/seed export" />
+            <Trace agent="Hermes" text="Introduced dedicated /api/learners route" />
+            <Trace agent="Hermes" text="Simplified evidence upload learner selection" />
+            <Trace agent="Jed" text="Updated Hermes authority rules and operator scope" />
           </div>
         </div>
-      </div>
 
-      {/* ━━━ BOTTOM ROW ━━━ */}
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: '1fr 1fr',
-        gap: '20px',
-      }}>
-
-        {/* ━━━ 6. UNKNOWNS / NEEDS ATTENTION ━━━ */}
-        {/* Trust form: Honesty — "We say what we don't know" */}
+        {/* ━━━ 6. UNKNOWNS ━━━ */}
         <div className="card">
-          <div className="section-label">Needs Attention</div>
+          <div className="section-header">
+            <div className="section-icon">△</div>
+            <div className="section-title">Needs Attention</div>
+          </div>
           <div>
-            <UnknownItem severity="blocked" text="Supabase env vars missing on Hermes mini — blocks all deploys and server-rendered pages" />
-            <UnknownItem severity="attention" text="Three seed-link fallbacks now return 405 after GET removal — low urgency, empty-state only" />
-            <UnknownItem severity="attention" text="Prod deploy verification pending once env is restored" />
-            <UnknownItem severity="neutral" text="Question bank limited to ~20 items per domain — CAT precision ceiling" />
+            <StateRow dot="red" text="Supabase env vars missing on Hermes mini — blocks all deploys and server-rendered pages" />
+            <StateRow dot="amber" text="Three seed-link fallbacks now return 405 — low urgency, empty-state only" />
+            <StateRow dot="amber" text="Prod deploy verification pending once env is restored" />
+            <StateRow dot="neutral" text="Question bank limited to ~20 items per domain — CAT precision ceiling" />
           </div>
         </div>
 
-        {/* ━━━ 7. APPROVAL QUEUE ━━━ */}
-        {/* Trust form: Human sovereignty — "The human is still above the system" */}
+        {/* ━━━ 7. APPROVALS ━━━ */}
         <div className="card">
-          <div className="section-label">Awaiting Approval</div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-            <ApprovalItem
-              text="Configure Supabase env vars on Hermes mini"
-              type="credential"
-            />
-            <ApprovalItem
-              text="Deploy Learner to Vercel production"
-              type="deploy"
-            />
-            <ApprovalItem
-              text="Expand Hermes authority to include practice-loop feature work"
-              type="authority"
-            />
+          <div className="section-header">
+            <div className="section-icon">⏎</div>
+            <div className="section-title">Awaiting Approval</div>
           </div>
-
-          {/* Empty state hint */}
-          <div style={{
-            marginTop: '20px',
-            paddingTop: '12px',
-            borderTop: '1px solid var(--border)',
-          }}>
-            <p style={{ fontSize: '0.75rem', color: 'var(--text-faint)', lineHeight: 1.5 }}>
-              Items appear here when an agent action requires human countersignature before proceeding.
-            </p>
+          <div>
+            <Approval type="credential" text="Configure Supabase env vars on Hermes mini" />
+            <Approval type="deploy" text="Deploy Learner to Vercel production" />
+            <Approval type="authority" text="Expand Hermes authority for practice-loop feature work" />
           </div>
+          <p style={{ fontSize: '11px', color: 'var(--text-faint)', marginTop: '14px', lineHeight: 1.5 }}>
+            Items here require human countersignature before proceeding.
+          </p>
         </div>
+
       </div>
     </div>
   );
 }
 
+/* ─── Components ──────────────────────────────────────── */
 
-/* ─── Component helpers ────────────────────────────────── */
-
-function MetaItem({ label, value }: { label: string; value: string }) {
+function Meta({ label, value }: { label: string; value: string }) {
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-      <span className="mono" style={{ fontSize: '0.65rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-        {label}
-      </span>
-      <span style={{ fontSize: '0.82rem', color: 'var(--text-secondary)' }}>{value}</span>
-    </div>
-  );
-}
-
-function StateRow({ status, text }: { status: 'verified' | 'attention' | 'blocked' | 'neutral'; text: string }) {
-  return (
-    <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
-      <span className={`status-dot ${status}`} style={{ marginTop: '6px' }} />
-      <span style={{ fontSize: '0.84rem', color: 'var(--text-secondary)', lineHeight: 1.45 }}>{text}</span>
-    </div>
-  );
-}
-
-function ResourcePill({ icon, label, value, status }: {
-  icon: string; label: string; value: string;
-  status: 'verified' | 'attention' | 'blocked' | 'neutral';
-}) {
-  const dotColor = {
-    verified: 'var(--verified)',
-    attention: 'var(--attention)',
-    blocked: 'var(--blocked)',
-    neutral: 'var(--text-faint)',
-  }[status];
-
-  return (
-    <div className="resource-pill">
-      <span style={{ fontSize: '0.7rem', opacity: 0.5 }}>{icon}</span>
       <span className="label">{label}</span>
-      <span style={{ fontSize: '0.78rem', color: 'var(--text-primary)' }}>{value}</span>
-      <span style={{
-        width: '6px', height: '6px', borderRadius: '50%',
-        background: dotColor, flexShrink: 0,
-      }} />
+      <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>{value}</span>
     </div>
   );
 }
 
-function AgentBadge({ name, role }: { name: string; role: string }) {
+function StateRow({ dot, text }: { dot: 'green' | 'amber' | 'red' | 'neutral'; text: string }) {
+  return (
+    <div className="row-item">
+      <span className={`dot dot-${dot}`} style={{ marginTop: '5px' }} />
+      <span style={{ color: dot === 'red' ? 'var(--text-primary)' : undefined }}>{text}</span>
+    </div>
+  );
+}
+
+function Chip({ label, value, dot }: { label: string; value: string; dot: 'green' | 'amber' | 'red' | 'neutral' }) {
+  return (
+    <div className="chip">
+      <span className="chip-label">{label}</span>
+      <span style={{ color: 'var(--text-primary)', fontSize: '11.5px' }}>{value}</span>
+      <span className={`dot dot-${dot}`} />
+    </div>
+  );
+}
+
+function AgentTag({ name, role }: { name: string; role: string }) {
   return (
     <div style={{
-      display: 'flex', alignItems: 'center', gap: '8px',
-      padding: '6px 12px',
+      display: 'flex', alignItems: 'center', gap: '6px',
+      padding: '4px 10px',
       background: 'var(--bg-subtle)',
       border: '1px solid var(--border)',
-      borderRadius: 'var(--radius-md)',
+      borderRadius: 'var(--r-md)',
+      fontSize: '11.5px',
     }}>
-      <span style={{ fontSize: '0.84rem', fontWeight: 500 }}>{name}</span>
-      <span className="mono" style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>{role}</span>
+      <span style={{ fontWeight: 500, color: 'var(--text-primary)' }}>{name}</span>
+      <span className="mono" style={{ fontSize: '10px', color: 'var(--text-muted)' }}>{role}</span>
     </div>
   );
 }
 
-function TraceItem({ agent, text }: { agent: string; text: string }) {
+function Trace({ agent, text }: { agent: string; text: string }) {
   return (
-    <div className="trace-item">
-      <span className="agent">{agent}</span>
+    <div className="trace">
+      <span className="trace-agent">{agent}</span>
       <span>{text}</span>
     </div>
   );
 }
 
-function UnknownItem({ severity, text }: { severity: 'blocked' | 'attention' | 'neutral'; text: string }) {
-  return (
-    <div className="unknown-item">
-      <span className={`status-dot ${severity}`} style={{ marginTop: '5px' }} />
-      <span style={{ color: severity === 'blocked' ? 'var(--blocked)' : 'var(--text-secondary)' }}>{text}</span>
-    </div>
-  );
-}
-
-function ApprovalItem({ text, type }: { text: string; type: 'credential' | 'deploy' | 'authority' }) {
-  const typeLabel = { credential: 'Credential', deploy: 'Deploy', authority: 'Authority' }[type];
-  const badgeClass = {
-    credential: 'badge-blocked',
-    deploy: 'badge-attention',
+function Approval({ type, text }: { type: 'credential' | 'deploy' | 'authority'; text: string }) {
+  const badge = {
+    credential: 'badge-red',
+    deploy: 'badge-amber',
     authority: 'badge-neutral',
   }[type];
+  const label = { credential: 'Credential', deploy: 'Deploy', authority: 'Authority' }[type];
 
   return (
-    <div className="approval-item">
-      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1 }}>
-        <span className={`badge ${badgeClass}`}>{typeLabel}</span>
-        <span>{text}</span>
-      </div>
-      <button className="approval-btn">Approve</button>
+    <div className="approval">
+      <span className={`badge ${badge}`}>{label}</span>
+      <span style={{ flex: 1 }}>{text}</span>
+      <button className="approve-btn">Approve</button>
     </div>
   );
 }
