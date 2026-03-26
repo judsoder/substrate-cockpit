@@ -1,34 +1,58 @@
-// Substrate Cockpit — renders entirely from a single schema object.
-// To update content: edit lib/mock/learner.ts, not this file.
+// Substrate Cockpit — renders from a single canonical schema object.
+// To update content: edit lib/mock/learner.ts only.
 
 import { LEARNER_COCKPIT } from '@/lib/mock/learner';
 import type {
-  SubstrateCockpit, ProjectIdentity, StateItem, AuthorityMap,
-  Resource, VerifiedAction, AttentionItem, ApprovalItem, ApprovalType,
+  SubstrateCockpit, ProjectIdentity, CurrentState, StateItem,
+  AuthorityMap, Actor, ResourceGraph, Resource, Machine,
+  VerifiedActions, VerifiedAction, AttentionItems, AttentionItem,
+  ApprovalQueue, ApprovalItem,
 } from '@/lib/schema';
 
 const cockpit: SubstrateCockpit = LEARNER_COCKPIT;
 
-const STATUS_BADGE: Record<string, string> = {
-  stable: 'badge-green',
-  active: 'badge-green',
-  degraded: 'badge-amber',
-  down: 'badge-red',
-};
+// ── Status mapping helpers ───────────────────────────────
 
-const APPROVAL_BADGE: Record<ApprovalType, string> = {
-  credential: 'badge-red',
-  deploy: 'badge-amber',
-  authority: 'badge-neutral',
-  resource: 'badge-neutral',
-};
+function statusDot(s: string): string {
+  const map: Record<string, string> = {
+    verified: 'green', connected: 'green', active: 'green',
+    attention: 'amber', partial: 'amber', 'active-work': 'green',
+    blocked: 'red', disconnected: 'red', degraded: 'amber',
+    neutral: 'neutral', unknown: 'neutral', inactive: 'neutral',
+  };
+  return map[s] || 'neutral';
+}
 
-const STATUS_DOT: Record<string, string> = {
-  verified: 'green',
-  attention: 'amber',
-  blocked: 'red',
-  neutral: 'neutral',
-};
+function statusBadge(s: string): string {
+  const map: Record<string, string> = {
+    stable: 'badge-green', 'active-work': 'badge-green',
+    degraded: 'badge-amber', down: 'badge-red',
+  };
+  return map[s] || 'badge-neutral';
+}
+
+function statusLabel(s: string): string {
+  return s.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+}
+
+function shortTime(iso: string): string {
+  try {
+    const d = new Date(iso);
+    return d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+  } catch { return iso; }
+}
+
+function shortDate(iso: string): string {
+  try {
+    const d = new Date(iso);
+    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + ' ' + shortTime(iso);
+  } catch { return iso; }
+}
+
+const SEVERITY_DOT: Record<string, string> = { high: 'red', medium: 'amber', low: 'neutral' };
+const TYPE_BADGE: Record<string, string> = { blocker: 'badge-red', risk: 'badge-amber', unknown: 'badge-neutral', debt: 'badge-neutral' };
+const ACTION_BADGE: Record<string, string> = { fix: 'badge-green', build: 'badge-green', 'update-authority': 'badge-amber', deploy: 'badge-green', review: 'badge-neutral' };
+const VERIFY_DOT: Record<string, string> = { verified: 'green', reported: 'amber', unverified: 'neutral' };
 
 export default function CockpitPage() {
   const { project_identity: p, current_state, authority_map, resource_graph, verified_actions, attention_items, approval_queue } = cockpit;
@@ -36,71 +60,22 @@ export default function CockpitPage() {
   return (
     <div style={{ maxWidth: '1100px', margin: '0 auto', padding: '32px 20px 64px' }}>
 
-      {/* ━━━ 1. PROJECT HEADER ━━━ */}
       <Header identity={p} />
 
-      {/* ━━━ GRID ━━━ */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
-
-        {/* ━━━ 2. CURRENT STATE ━━━ */}
-        <Card icon="◉" title="Current State">
-          {current_state.map((item, i) => (
-            <StateRow key={i} dot={STATUS_DOT[item.status]} text={item.text} />
-          ))}
-        </Card>
-
-        {/* ━━━ 3. AUTHORITY ━━━ */}
-        <Card icon="◈" title="Authority & Boundaries">
-          <AuthorityPanel map={authority_map} agents={p.agents} />
-        </Card>
-
-        {/* ━━━ 4. RESOURCES ━━━ */}
-        <Card icon="⬡" title="Connected Resources">
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-            {resource_graph.map((r, i) => (
-              <Chip key={i} label={r.kind} value={r.value} dot={STATUS_DOT[r.status]} />
-            ))}
-          </div>
-        </Card>
-
-        {/* ━━━ 5. TRACE ━━━ */}
-        <Card icon="▸" title="Recent Verified Actions">
-          {verified_actions.map((a, i) => (
-            <Trace key={i} agent={a.agent} text={a.text} />
-          ))}
-        </Card>
-
-        {/* ━━━ 6. UNKNOWNS ━━━ */}
-        <Card icon="△" title="Needs Attention">
-          {attention_items.map((item, i) => (
-            <StateRow key={i} dot={STATUS_DOT[item.severity]} text={item.text} />
-          ))}
-        </Card>
-
-        {/* ━━━ 7. APPROVALS ━━━ */}
-        <Card icon="⏎" title="Awaiting Approval">
-          {approval_queue.map((item, i) => (
-            <ApprovalRow key={i} item={item} />
-          ))}
-          {approval_queue.length > 0 && (
-            <p style={{ fontSize: '11px', color: 'var(--text-faint)', marginTop: '14px', lineHeight: 1.5 }}>
-              Items here require human countersignature before proceeding.
-            </p>
-          )}
-          {approval_queue.length === 0 && (
-            <p style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
-              No pending approvals.
-            </p>
-          )}
-        </Card>
-
+        <CurrentStateCard state={current_state} />
+        <AuthorityCard map={authority_map} />
+        <ResourceCard graph={resource_graph} />
+        <TraceCard actions={verified_actions} />
+        <AttentionCard items={attention_items} />
+        <ApprovalCard queue={approval_queue} />
       </div>
     </div>
   );
 }
 
 
-/* ─── Composition components ──────────────────────────── */
+/* ━━━ 1. HEADER ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
 
 function Header({ identity }: { identity: ProjectIdentity }) {
   return (
@@ -108,65 +83,271 @@ function Header({ identity }: { identity: ProjectIdentity }) {
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
         <div style={{ display: 'flex', alignItems: 'baseline', gap: '12px' }}>
           <h1 style={{ fontSize: '18px', fontWeight: 600, letterSpacing: '-0.01em' }}>
-            {identity.name}
+            {identity.project_name}
           </h1>
           <span style={{ fontSize: '12.5px', color: 'var(--text-muted)' }}>
-            {identity.purpose}
+            {identity.one_line_purpose}
           </span>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <span className={`badge ${STATUS_BADGE[identity.status] || 'badge-neutral'}`}>
-            {identity.status.charAt(0).toUpperCase() + identity.status.slice(1)}
+          <span className={`badge ${statusBadge(identity.overall_status)}`}>
+            {statusLabel(identity.overall_status)}
           </span>
           <span className="mono" style={{ fontSize: '10px', color: 'var(--text-faint)' }}>
-            Verified {identity.last_verified}
+            Verified {shortTime(identity.last_verified_at)} by {identity.verified_by}
           </span>
         </div>
       </div>
-      <div style={{
-        display: 'flex', gap: '20px', marginTop: '12px',
-        paddingTop: '10px', borderTop: '1px solid var(--border)',
-      }}>
-        <MetaLabel label="Owner" value={identity.owner} />
-        <MetaLabel label="Env" value={identity.environment} />
-        <MetaLabel label="Agents" value={identity.agents.map(a => a.name).join(' · ')} />
-        <MetaLabel label="Repo" value={identity.repo} />
+      <div style={{ display: 'flex', gap: '20px', marginTop: '12px', paddingTop: '10px', borderTop: '1px solid var(--border)' }}>
+        <MetaLabel label="Owner" value={identity.primary_human_owner} />
+        <MetaLabel label="Env" value={identity.current_environment} />
+        <MetaLabel label="Agents" value={identity.active_agents.join(' · ')} />
       </div>
     </header>
   );
 }
 
-function AuthorityPanel({ map, agents }: { map: AuthorityMap; agents: ProjectIdentity['agents'] }) {
+
+/* ━━━ 2. CURRENT STATE ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+
+function CurrentStateCard({ state }: { state: CurrentState }) {
   return (
-    <>
-      <div>
-        {map.allowed.map((text, i) => (
-          <div key={`a${i}`} className="auth-row">
-            <span className="auth-scope" style={{ color: 'var(--green)' }}>CAN</span>
-            <span style={{ color: 'var(--text-secondary)' }}>{text}</span>
+    <Card icon="◉" title="Current State">
+      {state.state_items.map(item => (
+        <div key={item.id} className="row-item" style={{ flexDirection: 'column', gap: '2px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span className={`dot dot-${statusDot(item.status)}`} />
+            <span style={{ fontWeight: 500, fontSize: '12.5px', color: 'var(--text-primary)' }}>{item.label}</span>
+            <span className="badge badge-neutral" style={{ fontSize: '9px', height: '16px', padding: '0 5px' }}>{item.scope}</span>
           </div>
-        ))}
-        {map.forbidden.map((text, i) => (
-          <div key={`f${i}`} className="auth-row">
-            <span className="auth-scope" style={{ color: 'var(--red)' }}>CANNOT</span>
-            <span style={{ color: 'var(--text-secondary)' }}>{text}</span>
+          <div style={{ paddingLeft: '14px', fontSize: '12px', color: 'var(--text-secondary)', lineHeight: 1.45 }}>
+            {item.summary}
           </div>
-        ))}
-        {map.requires_approval.map((text, i) => (
-          <div key={`r${i}`} className="auth-row">
-            <span className="auth-scope" style={{ color: 'var(--amber)' }}>NEEDS</span>
-            <span style={{ color: 'var(--text-secondary)' }}>{text}</span>
-          </div>
-        ))}
-      </div>
-      <div style={{ marginTop: '14px', paddingTop: '10px', borderTop: '1px solid var(--border)', display: 'flex', gap: '8px' }}>
-        {agents.map((a, i) => (
-          <AgentTag key={i} name={a.name} role={a.role} />
-        ))}
-      </div>
-    </>
+        </div>
+      ))}
+
+      {state.current_blockers.length > 0 && (
+        <div style={{ marginTop: '12px', paddingTop: '10px', borderTop: '1px solid var(--border)' }}>
+          <div className="label" style={{ marginBottom: '6px', color: 'var(--red)' }}>Blockers</div>
+          {state.current_blockers.map((b, i) => (
+            <div key={i} style={{ fontSize: '12px', color: 'var(--text-secondary)', display: 'flex', gap: '6px', marginBottom: '2px' }}>
+              <span className="dot dot-red" style={{ marginTop: '5px' }} />
+              {b}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {state.current_assumptions.length > 0 && (
+        <div style={{ marginTop: '8px' }}>
+          <div className="label" style={{ marginBottom: '4px' }}>Assumptions</div>
+          {state.current_assumptions.map((a, i) => (
+            <div key={i} style={{ fontSize: '11.5px', color: 'var(--text-muted)', lineHeight: 1.45 }}>{a}</div>
+          ))}
+        </div>
+      )}
+    </Card>
   );
 }
+
+
+/* ━━━ 3. AUTHORITY ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+
+function AuthorityCard({ map }: { map: AuthorityMap }) {
+  return (
+    <Card icon="◈" title="Authority & Boundaries">
+      {map.allowed_actions.map((text, i) => (
+        <div key={`a${i}`} className="auth-row">
+          <span className="auth-scope" style={{ color: 'var(--green)' }}>CAN</span>
+          <span style={{ color: 'var(--text-secondary)' }}>{text}</span>
+        </div>
+      ))}
+      {map.forbidden_actions.map((text, i) => (
+        <div key={`f${i}`} className="auth-row">
+          <span className="auth-scope" style={{ color: 'var(--red)' }}>CANNOT</span>
+          <span style={{ color: 'var(--text-secondary)' }}>{text}</span>
+        </div>
+      ))}
+      {map.requires_countersignature.map((text, i) => (
+        <div key={`r${i}`} className="auth-row">
+          <span className="auth-scope" style={{ color: 'var(--amber)' }}>NEEDS</span>
+          <span style={{ color: 'var(--text-secondary)' }}>{text}</span>
+        </div>
+      ))}
+
+      {/* Scoped authorities */}
+      {map.scoped_authorities.length > 0 && (
+        <div style={{ marginTop: '10px', paddingTop: '8px', borderTop: '1px solid var(--border)' }}>
+          <div className="label" style={{ marginBottom: '6px' }}>Scoped Authorities</div>
+          {map.scoped_authorities.map(sa => (
+            <div key={sa.id} style={{ display: 'flex', gap: '8px', fontSize: '11.5px', color: 'var(--text-secondary)', marginBottom: '3px' }}>
+              <span className="mono" style={{ fontSize: '10px', color: 'var(--text-muted)' }}>{sa.actor_name}</span>
+              <span>{sa.authority}</span>
+              <span style={{ color: 'var(--text-faint)' }}>→ {sa.scope}</span>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Actors */}
+      <div style={{ marginTop: '10px', paddingTop: '8px', borderTop: '1px solid var(--border)', display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+        {map.actors.map(a => (
+          <ActorTag key={a.id} actor={a} />
+        ))}
+      </div>
+
+      {map.authority_notes && (
+        <div style={{ marginTop: '8px', fontSize: '11px', color: 'var(--text-faint)', lineHeight: 1.5, fontStyle: 'italic' }}>
+          {map.authority_notes}
+        </div>
+      )}
+    </Card>
+  );
+}
+
+
+/* ━━━ 4. RESOURCES ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+
+function ResourceCard({ graph }: { graph: ResourceGraph }) {
+  return (
+    <Card icon="⬡" title="Connected Resources">
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '10px' }}>
+        {graph.resources.map(r => (
+          <div key={r.id} className="chip">
+            <span className="chip-label">{r.provider}</span>
+            <span style={{ color: 'var(--text-primary)', fontSize: '11.5px' }}>{r.name}</span>
+            <span className={`dot dot-${statusDot(r.status)}`} />
+          </div>
+        ))}
+      </div>
+
+      {graph.machines.length > 0 && (
+        <div style={{ paddingTop: '8px', borderTop: '1px solid var(--border)' }}>
+          <div className="label" style={{ marginBottom: '6px' }}>Machines</div>
+          <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+            {graph.machines.map(m => (
+              <div key={m.id} className="chip">
+                <span className={`dot dot-${statusDot(m.status)}`} />
+                <span style={{ color: 'var(--text-primary)', fontSize: '11.5px' }}>{m.name}</span>
+                <span className="chip-label">{m.role}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {graph.missing_resources.length > 0 && (
+        <div style={{ marginTop: '8px', paddingTop: '8px', borderTop: '1px solid var(--border)' }}>
+          <div className="label" style={{ marginBottom: '4px', color: 'var(--red)' }}>Missing</div>
+          {graph.missing_resources.map((m, i) => (
+            <div key={i} style={{ fontSize: '11.5px', color: 'var(--text-secondary)', display: 'flex', gap: '6px' }}>
+              <span className="dot dot-red" style={{ marginTop: '5px' }} />
+              {m}
+            </div>
+          ))}
+        </div>
+      )}
+    </Card>
+  );
+}
+
+
+/* ━━━ 5. TRACE ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+
+function TraceCard({ actions }: { actions: VerifiedActions }) {
+  return (
+    <Card icon="▸" title="Recent Verified Actions">
+      {actions.actions.map(a => (
+        <div key={a.id} className="trace">
+          <span className="trace-agent">{a.actor}</span>
+          <div style={{ flex: 1 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <span>{a.summary}</span>
+            </div>
+            <div style={{ display: 'flex', gap: '8px', marginTop: '2px' }}>
+              <span className="mono" style={{ fontSize: '9.5px', color: 'var(--text-faint)' }}>{a.artifact}</span>
+              <span className={`dot dot-${VERIFY_DOT[a.verification_status]}`} style={{ width: '5px', height: '5px', marginTop: '4px' }} />
+              <span style={{ fontSize: '9.5px', color: 'var(--text-faint)' }}>{shortDate(a.timestamp)}</span>
+            </div>
+          </div>
+        </div>
+      ))}
+
+      {actions.handoff_note && (
+        <div style={{ marginTop: '10px', paddingTop: '8px', borderTop: '1px solid var(--border)', fontSize: '11px', color: 'var(--text-muted)', lineHeight: 1.5, fontStyle: 'italic' }}>
+          {actions.handoff_note}
+        </div>
+      )}
+    </Card>
+  );
+}
+
+
+/* ━━━ 6. ATTENTION ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+
+function AttentionCard({ items }: { items: AttentionItems }) {
+  if (items.items.length === 0) {
+    return (
+      <Card icon="△" title="Needs Attention">
+        <p style={{ fontSize: '12px', color: 'var(--text-muted)' }}>No current attention items.</p>
+      </Card>
+    );
+  }
+  return (
+    <Card icon="△" title="Needs Attention">
+      {items.items.map(item => (
+        <div key={item.id} className="row-item" style={{ flexDirection: 'column', gap: '3px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span className={`dot dot-${SEVERITY_DOT[item.severity]}`} />
+            <span style={{ fontWeight: 500, fontSize: '12.5px', color: item.severity === 'high' ? 'var(--text-primary)' : undefined }}>{item.title}</span>
+            <span className={`badge ${TYPE_BADGE[item.type]}`} style={{ fontSize: '9px', height: '16px', padding: '0 5px' }}>{item.type}</span>
+          </div>
+          <div style={{ paddingLeft: '14px', fontSize: '12px', color: 'var(--text-secondary)', lineHeight: 1.45 }}>
+            {item.summary}
+          </div>
+          <div style={{ paddingLeft: '14px', display: 'flex', gap: '12px', fontSize: '10.5px', marginTop: '2px' }}>
+            <span style={{ color: 'var(--text-faint)' }}>Owner: {item.owner}</span>
+            <span style={{ color: 'var(--text-faint)' }}>Next: {item.next_step}</span>
+          </div>
+        </div>
+      ))}
+    </Card>
+  );
+}
+
+
+/* ━━━ 7. APPROVALS ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+
+function ApprovalCard({ queue }: { queue: ApprovalQueue }) {
+  return (
+    <Card icon="⏎" title="Awaiting Approval">
+      {queue.approvals.length === 0 ? (
+        <div style={{ padding: '12px 0', textAlign: 'center' }}>
+          <p style={{ fontSize: '12.5px', color: 'var(--text-muted)', marginBottom: '4px' }}>No pending approvals.</p>
+          <p style={{ fontSize: '11px', color: 'var(--text-faint)' }}>
+            Items appear here when an agent action requires human countersignature.
+          </p>
+        </div>
+      ) : (
+        <>
+          {queue.approvals.map(item => (
+            <div key={item.id} className="approval">
+              <span className="badge badge-amber">{item.type}</span>
+              <span style={{ flex: 1 }}>{item.text}</span>
+              <button className="approve-btn">Approve</button>
+            </div>
+          ))}
+          <p style={{ fontSize: '11px', color: 'var(--text-faint)', marginTop: '14px', lineHeight: 1.5 }}>
+            Items here require human countersignature before proceeding.
+          </p>
+        </>
+      )}
+    </Card>
+  );
+}
+
+
+/* ─── Shared components ───────────────────────────────── */
 
 function Card({ icon, title, children }: { icon: string; title: string; children: React.ReactNode }) {
   return (
@@ -180,9 +361,6 @@ function Card({ icon, title, children }: { icon: string; title: string; children
   );
 }
 
-
-/* ─── Leaf components ─────────────────────────────────── */
-
 function MetaLabel({ label, value }: { label: string; value: string }) {
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
@@ -192,26 +370,8 @@ function MetaLabel({ label, value }: { label: string; value: string }) {
   );
 }
 
-function StateRow({ dot, text }: { dot: string; text: string }) {
-  return (
-    <div className="row-item">
-      <span className={`dot dot-${dot}`} style={{ marginTop: '5px' }} />
-      <span style={{ color: dot === 'red' ? 'var(--text-primary)' : undefined }}>{text}</span>
-    </div>
-  );
-}
-
-function Chip({ label, value, dot }: { label: string; value: string; dot: string }) {
-  return (
-    <div className="chip">
-      <span className="chip-label">{label}</span>
-      <span style={{ color: 'var(--text-primary)', fontSize: '11.5px' }}>{value}</span>
-      <span className={`dot dot-${dot}`} />
-    </div>
-  );
-}
-
-function AgentTag({ name, role }: { name: string; role: string }) {
+function ActorTag({ actor }: { actor: Actor }) {
+  const typeColor: Record<string, string> = { human: 'var(--blue)', agent: 'var(--green)', machine: 'var(--text-muted)' };
   return (
     <div style={{
       display: 'flex', alignItems: 'center', gap: '6px',
@@ -219,29 +379,9 @@ function AgentTag({ name, role }: { name: string; role: string }) {
       border: '1px solid var(--border)', borderRadius: 'var(--r-md)',
       fontSize: '11.5px',
     }}>
-      <span style={{ fontWeight: 500, color: 'var(--text-primary)' }}>{name}</span>
-      <span className="mono" style={{ fontSize: '10px', color: 'var(--text-muted)' }}>{role}</span>
-    </div>
-  );
-}
-
-function Trace({ agent, text }: { agent: string; text: string }) {
-  return (
-    <div className="trace">
-      <span className="trace-agent">{agent}</span>
-      <span>{text}</span>
-    </div>
-  );
-}
-
-function ApprovalRow({ item }: { item: ApprovalItem }) {
-  const badge = APPROVAL_BADGE[item.type];
-  const label = item.type.charAt(0).toUpperCase() + item.type.slice(1);
-  return (
-    <div className="approval">
-      <span className={`badge ${badge}`}>{label}</span>
-      <span style={{ flex: 1 }}>{item.text}</span>
-      <button className="approve-btn">Approve</button>
+      <span style={{ width: '5px', height: '5px', borderRadius: '50%', background: typeColor[actor.type] || 'var(--text-faint)' }} />
+      <span style={{ fontWeight: 500, color: 'var(--text-primary)' }}>{actor.name}</span>
+      <span className="mono" style={{ fontSize: '9.5px', color: 'var(--text-muted)' }}>{actor.role}</span>
     </div>
   );
 }
