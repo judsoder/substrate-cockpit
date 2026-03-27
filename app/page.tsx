@@ -285,30 +285,68 @@ function ResourceCard({ graph }: { graph: ResourceGraph }) {
 /* ━━━ 5. TRACE ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
 
 function TraceCard({ actions }: { actions: VerifiedActions }) {
+  // Primary: most recent 2 actions. Secondary: the rest.
+  const PRIMARY_COUNT = 2;
+  const primary = actions.actions.slice(0, PRIMARY_COUNT);
+  const earlier = actions.actions.slice(PRIMARY_COUNT);
+
   return (
     <Card icon="▸" title="Recent Verified Actions">
-      {actions.actions.map(a => (
-        <div key={a.id} className="trace">
-          <span className="trace-agent">{a.actor}</span>
-          <div style={{ flex: 1 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <span>{a.summary}</span>
-            </div>
-            <div style={{ display: 'flex', gap: '8px', marginTop: '2px' }}>
-              <span className="mono" style={{ fontSize: '9.5px', color: 'var(--text-faint)' }}>{a.artifact}</span>
-              <span className={`dot dot-${VERIFY_DOT[a.verification_status]}`} style={{ width: '5px', height: '5px', marginTop: '4px' }} />
-              <span style={{ fontSize: '9.5px', color: 'var(--text-faint)' }}>{shortDate(a.timestamp)}</span>
-            </div>
-          </div>
-        </div>
+      {/* Primary: latest high-signal actions */}
+      {primary.map(a => (
+        <TraceRow key={a.id} action={a} />
       ))}
 
+      {/* Secondary: earlier actions, visibly reachable */}
+      {earlier.length > 0 && (
+        <details className="detail-toggle">
+          <summary>Earlier actions ({earlier.length})</summary>
+          <div className="detail-body" style={{ paddingLeft: '0' }}>
+            {earlier.map(a => (
+              <TraceRow key={a.id} action={a} muted />
+            ))}
+          </div>
+        </details>
+      )}
+
+      {/* Handoff: distinct posture statement, not floating editorial */}
       {actions.handoff_note && (
-        <div style={{ marginTop: '10px', paddingTop: '8px', borderTop: '1px solid var(--border)', fontSize: '11px', color: 'var(--text-muted)', lineHeight: 1.5, fontStyle: 'italic' }}>
-          {actions.handoff_note}
+        <div style={{
+          marginTop: '12px',
+          padding: '8px 10px',
+          background: 'var(--bg-subtle)',
+          border: '1px solid var(--border)',
+          borderRadius: 'var(--r-md)',
+          fontSize: '11px',
+          color: 'var(--text-muted)',
+          lineHeight: 1.5,
+          display: 'flex',
+          gap: '8px',
+          alignItems: 'flex-start',
+        }}>
+          <span style={{ color: 'var(--text-faint)', flexShrink: 0, fontSize: '10px', marginTop: '1px' }}>⏸</span>
+          <span>{actions.handoff_note}</span>
         </div>
       )}
     </Card>
+  );
+}
+
+function TraceRow({ action: a, muted = false }: { action: VerifiedAction; muted?: boolean }) {
+  return (
+    <div className="trace" style={muted ? { opacity: 0.7 } : undefined}>
+      <span className="trace-agent">{a.actor}</span>
+      <div style={{ flex: 1 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <span>{a.summary}</span>
+        </div>
+        <div style={{ display: 'flex', gap: '8px', marginTop: '2px' }}>
+          <span className="mono" style={{ fontSize: '9.5px', color: 'var(--text-faint)' }}>{a.artifact}</span>
+          <span className={`dot dot-${VERIFY_DOT[a.verification_status]}`} style={{ width: '5px', height: '5px', marginTop: '4px' }} />
+          <span style={{ fontSize: '9.5px', color: 'var(--text-faint)' }}>{shortDate(a.timestamp)}</span>
+        </div>
+      </div>
+    </div>
   );
 }
 
