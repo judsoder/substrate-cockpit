@@ -152,6 +152,55 @@ export interface ApprovalQueue {
   approvals: ApprovalItem[];
 }
 
+// ── 8. Substrate Quality ────────────────────────────────
+
+export type FitScore = 1 | 2 | 3 | 4 | 5;
+export type ConditioningStatus = 'raw' | 'partially-conditioned' | 'conditioned' | 'needs-rework';
+export type UseMode = 'canonical' | 'reference' | 'context-only' | 'exclude';
+export type AssetType = 'document' | 'spec' | 'example' | 'research' | 'transcript' | 'code' | 'data' | 'template' | 'memo' | 'other';
+
+export interface SubstrateAsset {
+  id: string;
+  name: string;
+  asset_type: AssetType;
+  fit_score: FitScore | null; // null = not yet scored
+  fit_rationale: string;       // why this score — the explanation IS the value
+  conditioning_status: ConditioningStatus;
+  conditioning_note: string;   // what was done or needs doing
+  use_mode: UseMode;
+  last_reviewed_at: string;    // ISO timestamp, empty string if never
+  reviewed_by: string;
+}
+
+export type ImprovementAction = 'distill' | 'split' | 'add-header' | 'create' | 'merge' | 'rewrite' | 'exclude' | 'archive';
+export type ImprovementPriority = 'now' | 'soon' | 'later';
+
+export interface ImprovementItem {
+  id: string;
+  action: ImprovementAction;
+  target: string;              // asset name or description of what to create
+  rationale: string;
+  priority: ImprovementPriority;
+  assigned_to: string;
+  completed: boolean;
+}
+
+export interface WeakSubstrateNote {
+  id: string;
+  description: string;         // what's missing or weak
+  impact: string;              // why it matters for this project
+  suggested_fix: string;       // what would help
+}
+
+export interface SubstrateQuality {
+  assets: SubstrateAsset[];
+  improvement_queue: ImprovementItem[];
+  weak_substrate: WeakSubstrateNote[];
+  last_audit_at: string;       // ISO timestamp
+  last_audit_by: string;
+  audit_note: string;          // freeform summary of substrate health
+}
+
 // ── Cockpit (top-level) ─────────────────────────────────
 
 export interface SubstrateCockpit {
@@ -162,4 +211,5 @@ export interface SubstrateCockpit {
   verified_actions: VerifiedActions;
   attention_items: AttentionItems;
   approval_queue: ApprovalQueue;
+  substrate_quality: SubstrateQuality;
 }

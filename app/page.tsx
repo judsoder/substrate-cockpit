@@ -7,6 +7,7 @@ import type {
   AuthorityMap, Actor, ResourceGraph, Resource, Machine,
   VerifiedActions, VerifiedAction, AttentionItems, AttentionItem,
   ApprovalQueue, ApprovalItem,
+  SubstrateQuality, SubstrateAsset, ImprovementItem, WeakSubstrateNote,
 } from '@/lib/schema';
 
 const cockpit: SubstrateCockpit = LEARNER_COCKPIT;
@@ -55,7 +56,7 @@ const ACTION_BADGE: Record<string, string> = { fix: 'badge-green', build: 'badge
 const VERIFY_DOT: Record<string, string> = { verified: 'green', reported: 'amber', unverified: 'neutral' };
 
 export default function CockpitPage() {
-  const { project_identity: p, current_state, authority_map, resource_graph, verified_actions, attention_items, approval_queue } = cockpit;
+  const { project_identity: p, current_state, authority_map, resource_graph, verified_actions, attention_items, approval_queue, substrate_quality } = cockpit;
 
   return (
     <div style={{ maxWidth: '1100px', margin: '0 auto', padding: '32px 20px 64px' }}>
@@ -70,6 +71,9 @@ export default function CockpitPage() {
         <AttentionCard items={attention_items} />
         <ApprovalCard queue={approval_queue} />
       </div>
+
+      {/* Substrate Quality — full width below the grid */}
+      <SubstrateQualityCard quality={substrate_quality} />
     </div>
   );
 }
@@ -439,6 +443,187 @@ function ApprovalCard({ queue }: { queue: ApprovalQueue }) {
         Items here require human countersignature before proceeding.
       </p>
     </Card>
+  );
+}
+
+
+/* ━━━ 8. SUBSTRATE QUALITY ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+
+const FIT_COLORS: Record<number, string> = { 1: 'var(--red)', 2: 'var(--red)', 3: 'var(--amber)', 4: 'var(--green)', 5: 'var(--green)' };
+const CONDITIONING_DOT: Record<string, string> = { raw: 'red', 'partially-conditioned': 'amber', conditioned: 'green', 'needs-rework': 'red' };
+const USE_BADGE: Record<string, string> = { canonical: 'badge-green', reference: 'badge-neutral', 'context-only': 'badge-neutral', exclude: 'badge-red' };
+const PRIORITY_DOT: Record<string, string> = { now: 'red', soon: 'amber', later: 'neutral' };
+const ACTION_LABEL: Record<string, string> = { distill: 'Distill', split: 'Split', 'add-header': 'Add header', create: 'Create', merge: 'Merge', rewrite: 'Rewrite', exclude: 'Exclude', archive: 'Archive' };
+
+function SubstrateQualityCard({ quality }: { quality: SubstrateQuality }) {
+  const scored = quality.assets.filter(a => a.fit_score !== null);
+  const unscored = quality.assets.filter(a => a.fit_score === null);
+  const activeImprovements = quality.improvement_queue.filter(i => !i.completed);
+
+  return (
+    <div className="card" style={{ marginTop: '14px' }}>
+      <div className="section-header">
+        <div className="section-icon">◆</div>
+        <div className="section-title">Substrate Quality</div>
+        {quality.last_audit_at && (
+          <span className="mono" style={{ fontSize: '10px', color: 'var(--text-faint)', marginLeft: 'auto' }}>
+            Audited {shortDate(quality.last_audit_at)} by {quality.last_audit_by}
+          </span>
+        )}
+      </div>
+
+      {/* Audit note */}
+      {quality.audit_note && (
+        <div style={{
+          padding: '8px 10px',
+          background: 'var(--bg-subtle)',
+          border: '1px solid var(--border)',
+          borderRadius: 'var(--r-md)',
+          fontSize: '11.5px',
+          color: 'var(--text-secondary)',
+          lineHeight: 1.5,
+          marginBottom: '14px',
+        }}>
+          {quality.audit_note}
+        </div>
+      )}
+
+      {/* Asset table */}
+      <div className="label" style={{ marginBottom: '8px' }}>Assets ({quality.assets.length})</div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '1px' }}>
+        {scored.map(asset => (
+          <AssetRow key={asset.id} asset={asset} />
+        ))}
+        {unscored.map(asset => (
+          <AssetRow key={asset.id} asset={asset} />
+        ))}
+      </div>
+
+      {/* Improvement queue */}
+      {activeImprovements.length > 0 && (
+        <div style={{ marginTop: '14px', paddingTop: '12px', borderTop: '1px solid var(--border)' }}>
+          <div className="label" style={{ marginBottom: '8px' }}>Improvement Queue ({activeImprovements.length})</div>
+          {activeImprovements.map(item => (
+            <div key={item.id} style={{ display: 'flex', gap: '8px', marginBottom: '8px', fontSize: '12px', alignItems: 'flex-start' }}>
+              <span className={`dot dot-${PRIORITY_DOT[item.priority]}`} style={{ marginTop: '5px', flexShrink: 0 }} />
+              <div style={{ flex: 1 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <span className="badge badge-neutral" style={{ fontSize: '9px', height: '16px', padding: '0 5px' }}>
+                    {ACTION_LABEL[item.action] || item.action}
+                  </span>
+                  <span style={{ fontWeight: 500, color: 'var(--text-primary)' }}>{item.target}</span>
+                </div>
+                <div style={{ color: 'var(--text-secondary)', lineHeight: 1.45, marginTop: '2px' }}>
+                  {item.rationale}
+                </div>
+                <div style={{ display: 'flex', gap: '12px', marginTop: '2px', fontSize: '10.5px', color: 'var(--text-faint)' }}>
+                  <span>Assigned: {item.assigned_to}</span>
+                  <span>Priority: {item.priority}</span>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Weak / missing substrate */}
+      {quality.weak_substrate.length > 0 && (
+        <div style={{ marginTop: '14px', paddingTop: '12px', borderTop: '1px solid var(--border)' }}>
+          <div className="label" style={{ marginBottom: '8px', color: 'var(--amber)' }}>Missing or Weak Substrate</div>
+          {quality.weak_substrate.map(note => (
+            <div key={note.id} style={{ marginBottom: '10px', fontSize: '12px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '2px' }}>
+                <span className="dot dot-amber" style={{ flexShrink: 0 }} />
+                <span style={{ fontWeight: 500, color: 'var(--text-primary)' }}>{note.description}</span>
+              </div>
+              <div style={{ paddingLeft: '14px', color: 'var(--text-secondary)', lineHeight: 1.45 }}>
+                <div>{note.impact}</div>
+                <div style={{ marginTop: '3px', color: 'var(--text-muted)', fontStyle: 'italic' }}>
+                  Fix: {note.suggested_fix}
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Footer note */}
+      <div style={{ marginTop: '14px', paddingTop: '10px', borderTop: '1px solid var(--border)', fontSize: '10.5px', color: 'var(--text-faint)', lineHeight: 1.5 }}>
+        Scores reflect human consulting judgment, not automated evaluation. Fit scores indicate how well an asset serves the current project task — not inherent quality.
+      </div>
+    </div>
+  );
+}
+
+function AssetRow({ asset }: { asset: SubstrateAsset }) {
+  const hasScore = asset.fit_score !== null;
+  const scoreColor = hasScore ? FIT_COLORS[asset.fit_score!] : 'var(--text-faint)';
+
+  return (
+    <details className="detail-toggle" style={{ margin: 0, padding: 0 }}>
+      <summary style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: '8px',
+        padding: '6px 0',
+        fontSize: '12.5px',
+        cursor: 'pointer',
+      }}>
+        {/* Score */}
+        <span className="mono" style={{
+          width: '24px',
+          textAlign: 'center',
+          fontSize: '12px',
+          fontWeight: 600,
+          color: scoreColor,
+          flexShrink: 0,
+        }}>
+          {hasScore ? asset.fit_score : '—'}
+        </span>
+
+        {/* Conditioning dot */}
+        <span className={`dot dot-${CONDITIONING_DOT[asset.conditioning_status]}`} style={{ flexShrink: 0 }} />
+
+        {/* Name */}
+        <span style={{ fontWeight: 500, color: 'var(--text-primary)', flex: 1 }}>{asset.name}</span>
+
+        {/* Type + use mode badges */}
+        <span className="badge badge-neutral" style={{ fontSize: '9px', height: '16px', padding: '0 5px' }}>
+          {asset.asset_type}
+        </span>
+        <span className={`badge ${USE_BADGE[asset.use_mode]}`} style={{ fontSize: '9px', height: '16px', padding: '0 5px' }}>
+          {asset.use_mode.replace(/-/g, ' ')}
+        </span>
+      </summary>
+
+      <div className="detail-body" style={{ paddingLeft: '32px', marginBottom: '8px' }}>
+        {/* Rationale — this is the primary content */}
+        {asset.fit_rationale && (
+          <div style={{ marginBottom: '6px', lineHeight: 1.5 }}>
+            {asset.fit_rationale}
+          </div>
+        )}
+
+        {/* Conditioning note */}
+        {asset.conditioning_note && (
+          <div style={{ marginBottom: '4px' }}>
+            <span style={{ color: 'var(--text-faint)' }}>Conditioning:</span>{' '}
+            <span>{asset.conditioning_note}</span>
+          </div>
+        )}
+
+        {/* Review metadata */}
+        {asset.last_reviewed_at ? (
+          <div style={{ fontSize: '10.5px', color: 'var(--text-faint)', marginTop: '4px' }}>
+            Reviewed {shortDate(asset.last_reviewed_at)} by {asset.reviewed_by}
+          </div>
+        ) : (
+          <div style={{ fontSize: '10.5px', color: 'var(--text-faint)', marginTop: '4px', fontStyle: 'italic' }}>
+            Not yet reviewed
+          </div>
+        )}
+      </div>
+    </details>
   );
 }
 
