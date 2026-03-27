@@ -138,13 +138,21 @@ function CurrentStateCard({ state }: { state: CurrentState }) {
         </div>
       )}
 
-      {state.current_assumptions.length > 0 && (
-        <div style={{ marginTop: '8px' }}>
-          <div className="label" style={{ marginBottom: '4px' }}>Assumptions</div>
-          {state.current_assumptions.map((a, i) => (
-            <div key={i} style={{ fontSize: '11.5px', color: 'var(--text-muted)', lineHeight: 1.45 }}>{a}</div>
-          ))}
-        </div>
+      {/* Secondary: assumptions + last meaningful change */}
+      {(state.current_assumptions.length > 0 || state.last_meaningful_change) && (
+        <details className="detail-toggle">
+          <summary>Assumptions & context</summary>
+          <div className="detail-body">
+            {state.current_assumptions.map((a, i) => (
+              <div key={i} style={{ marginBottom: '4px' }}>{a}</div>
+            ))}
+            {state.last_meaningful_change && (
+              <div style={{ marginTop: '6px', color: 'var(--text-muted)' }}>
+                Last change: {state.last_meaningful_change}
+              </div>
+            )}
+          </div>
+        </details>
       )}
     </Card>
   );
@@ -197,9 +205,12 @@ function AuthorityCard({ map }: { map: AuthorityMap }) {
       </div>
 
       {map.authority_notes && (
-        <div style={{ marginTop: '8px', fontSize: '11px', color: 'var(--text-faint)', lineHeight: 1.5, fontStyle: 'italic' }}>
-          {map.authority_notes}
-        </div>
+        <details className="detail-toggle">
+          <summary>Authority notes</summary>
+          <div className="detail-body" style={{ fontStyle: 'italic' }}>
+            {map.authority_notes}
+          </div>
+        </details>
       )}
     </Card>
   );
@@ -247,6 +258,25 @@ function ResourceCard({ graph }: { graph: ResourceGraph }) {
           ))}
         </div>
       )}
+
+      {/* Secondary: environments + source of truth */}
+      <details className="detail-toggle">
+        <summary>Environments & provenance</summary>
+        <div className="detail-body">
+          {graph.environments.length > 0 && (
+            <div style={{ marginBottom: '8px' }}>
+              {graph.environments.map((e, i) => (
+                <div key={i}><span style={{ color: 'var(--text-muted)' }}>{e.name}</span> — {e.purpose}</div>
+              ))}
+            </div>
+          )}
+          {graph.resources.filter(r => r.source_of_truth).map(r => (
+            <div key={r.id} style={{ marginBottom: '3px' }}>
+              <span style={{ color: 'var(--text-muted)' }}>{r.name}</span>: {r.source_of_truth}
+            </div>
+          ))}
+        </div>
+      </details>
     </Card>
   );
 }
@@ -286,6 +316,9 @@ function TraceCard({ actions }: { actions: VerifiedActions }) {
 /* ━━━ 6. ATTENTION ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
 
 function AttentionCard({ items }: { items: AttentionItems }) {
+  const primary = items.items.filter(i => i.severity === 'high');
+  const watching = items.items.filter(i => i.severity !== 'high');
+
   if (items.items.length === 0) {
     return (
       <Card icon="△" title="Needs Attention">
@@ -295,11 +328,12 @@ function AttentionCard({ items }: { items: AttentionItems }) {
   }
   return (
     <Card icon="△" title="Needs Attention">
-      {items.items.map(item => (
+      {/* Primary: high-severity blockers */}
+      {primary.map(item => (
         <div key={item.id} className="row-item" style={{ flexDirection: 'column', gap: '3px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <span className={`dot dot-${SEVERITY_DOT[item.severity]}`} />
-            <span style={{ fontWeight: 500, fontSize: '12.5px', color: item.severity === 'high' ? 'var(--text-primary)' : undefined }}>{item.title}</span>
+            <span style={{ fontWeight: 500, fontSize: '12.5px', color: 'var(--text-primary)' }}>{item.title}</span>
             <span className={`badge ${TYPE_BADGE[item.type]}`} style={{ fontSize: '9px', height: '16px', padding: '0 5px' }}>{item.type}</span>
           </div>
           <div style={{ paddingLeft: '14px', fontSize: '12px', color: 'var(--text-secondary)', lineHeight: 1.45 }}>
@@ -311,6 +345,28 @@ function AttentionCard({ items }: { items: AttentionItems }) {
           </div>
         </div>
       ))}
+
+      {/* Secondary: lower-severity watch items */}
+      {watching.length > 0 && (
+        <div className="watching-section">
+          <div className="watching-label">Watching ({watching.length})</div>
+          {watching.map(item => (
+            <div key={item.id} className="watching-item">
+              <span className={`dot dot-${SEVERITY_DOT[item.severity]}`} style={{ marginTop: '4px' }} />
+              <div>
+                <span>{item.title}</span>
+                <details className="detail-toggle" style={{ marginTop: '2px' }}>
+                  <summary>Details</summary>
+                  <div className="detail-body">
+                    <div>{item.summary}</div>
+                    <div style={{ marginTop: '4px' }}>Owner: {item.owner} · Next: {item.next_step}</div>
+                  </div>
+                </details>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
     </Card>
   );
 }
@@ -319,29 +375,31 @@ function AttentionCard({ items }: { items: AttentionItems }) {
 /* ━━━ 7. APPROVALS ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
 
 function ApprovalCard({ queue }: { queue: ApprovalQueue }) {
+  // Empty: render as quiet stub, not a full card
+  if (queue.approvals.length === 0) {
+    return (
+      <div className="card-stub">
+        <div className="section-icon">⏎</div>
+        <div className="section-title" style={{ fontSize: '11px' }}>Awaiting Approval</div>
+        <span style={{ fontSize: '11px', color: 'var(--text-faint)', marginLeft: '4px' }}>
+          — No pending items
+        </span>
+      </div>
+    );
+  }
+
   return (
     <Card icon="⏎" title="Awaiting Approval">
-      {queue.approvals.length === 0 ? (
-        <div style={{ padding: '12px 0', textAlign: 'center' }}>
-          <p style={{ fontSize: '12.5px', color: 'var(--text-muted)', marginBottom: '4px' }}>No pending approvals.</p>
-          <p style={{ fontSize: '11px', color: 'var(--text-faint)' }}>
-            Items appear here when an agent action requires human countersignature.
-          </p>
+      {queue.approvals.map(item => (
+        <div key={item.id} className="approval">
+          <span className="badge badge-amber">{item.type}</span>
+          <span style={{ flex: 1 }}>{item.text}</span>
+          <button className="approve-btn">Approve</button>
         </div>
-      ) : (
-        <>
-          {queue.approvals.map(item => (
-            <div key={item.id} className="approval">
-              <span className="badge badge-amber">{item.type}</span>
-              <span style={{ flex: 1 }}>{item.text}</span>
-              <button className="approve-btn">Approve</button>
-            </div>
-          ))}
-          <p style={{ fontSize: '11px', color: 'var(--text-faint)', marginTop: '14px', lineHeight: 1.5 }}>
-            Items here require human countersignature before proceeding.
-          </p>
-        </>
-      )}
+      ))}
+      <p style={{ fontSize: '11px', color: 'var(--text-faint)', marginTop: '14px', lineHeight: 1.5 }}>
+        Items here require human countersignature before proceeding.
+      </p>
     </Card>
   );
 }
